@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fully Comprehensive A320 Family RTOW Calculator</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        h1 { text-align: center; color: #2c3e50; }
+        .note {
+            background-color: #f3ca12;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .input-group { margin-bottom: 10px; }
+        label { display: inline-block; width: 250px; }
+        input, select { width: 200px; padding: 5px; }
+        select[multiple] { height: 100px; }
+        button { 
+            display: block; 
+            width: 200px; 
+            margin: 20px auto; 
+            padding: 10px; 
+            background-color: #3498db; 
+            color: white; 
+            border: none; 
+            cursor: pointer; 
+            font-size: 16px;
+        }
+        #result { 
+            margin-top: 20px; 
+            font-weight: bold; 
+            text-align: center; 
+            font-size: 1.2em;
+            padding: 10px;
+            background-color: #e0e0e0;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>RTOW Calculator for airbus A32x(1-2) Family</h1>
+    <div class="note">
+        Note: This calculation is specifically for the engine failure before V1 scenario.
+    </div>
+    <div id="calculator">
+        <div class="input-group">
+            <label for="aircraftType">Aircraft Type:</label>
+            <select id="aircraftType" onchange="updateEngineOptions()">
+                <option value="A320-100">A320-100</option>
+                <option value="A320-200">A320-200</option>
+                <option value="A320neo">A320neo</option>
+                <option value="A321-200">A321-200</option>
+                <option value="A321neo">A321neo</option>
+            </select>
+        </div>
+        <div class="input-group">
+            <label for="engineType">Engine Type:</label>
+            <select id="engineType"></select>
+        </div>
+        <div class="input-group">
+            <label for="runwayLength">Runway Length (m):</label>
+            <input type="number" id="runwayLength" value="3000">
+        </div>
+        <div class="input-group">
+            <label for="temperature">Temperature (°C):</label>
+            <input type="number" id="temperature" value="15">
+        </div>
+        <div class="input-group">
+            <label for="elevation">Airport Elevation (ft):</label>
+            <input type="number" id="elevation" value="0">
+        </div>
+        <div class="input-group">
+            <label for="qnh">QNH (hPa):</label>
+            <input type="number" id="qnh" value="1013">
+        </div>
+        <div class="input-group">
+            <label for="runwaySlope">Runway Slope (%):</label>
+            <input type="number" id="runwaySlope" value="0" step="0.1">
+        </div>
+        <div class="input-group">
+            <label for="windComponent">Wind Component (kt):</label>
+            <input type="number" id="windComponent" value="0">
+        </div>
+        <div class="input-group">
+            <label for="runwayCondition">Runway Condition:</label>
+            <select id="runwayCondition">
+                <option value="Dry">Dry</option>
+                <option value="Wet">Wet</option>
+                <option value="Contaminated">Contaminated</option>
+            </select>
+        </div>
+
+        <div class="input-group">
+            <label for="mmelItems">MMEL Items (Ctrl+Click to select multiple):</label>
+            <select id="mmelItems" multiple>
+                <option value="none">None</option>
+                <option value="apu">APU Inoperative</option>
+                <option value="reverser">One Thrust Reverser Inoperative</option>
+                <option value="generator">One Generator Inoperative</option>
+                <option value="hydraulic">One Hydraulic System Inoperative</option>
+                <option value="pack">One Air Conditioning Pack Inoperative</option>
+                <option value="antiSkid">Anti-Skid System Inoperative</option>
+            </select>
+        </div>
+
+
+        <div class="input-group">
+            <label for="flapSetting">Flap Setting:</label>
+            <select id="flapSetting">
+                <option value="1+F">CONF 1+F</option>
+                <option value="2">CONF 2</option>
+                <option value="3">CONF 3</option>
+            </select>
+        </div>
+        <div class="input-group">
+            <label for="antiIce">Anti-Ice System:</label>
+            <select id="antiIce">
+                <option value="Off">Off</option>
+                <option value="Engine">Engine Only</option>
+                <option value="Wing">Wing Only</option>
+                <option value="Both">Engine and Wing</option>
+            </select>
+        </div>
+        <div class="input-group">
+            <label for="packConfig">Air Conditioning Packs:</label>
+            <select id="packConfig">
+                <option value="Normal">Normal</option>
+                <option value="High">High Flow</option>
+                <option value="Off">Off</option>
+            </select>
+        </div>
+        <div class="input-group">
+            <label for="thrustSetting">Thrust Setting:</label>
+            <select id="thrustSetting">
+                <option value="TOGA">TOGA</option>
+                <option value="FLEX">FLEX</option>
+            </select>
+        </div>
+        <div class="input-group">
+            <label for="obstacleHeight">Obstacle Height (ft):</label>
+            <input type="number" id="obstacleHeight" value="0">
+        </div>
+        <div class="input-group">
+            <label for="obstacleDistance">Obstacle Distance from DER (m):</label>
+            <input type="number" id="obstacleDistance" value="0">
+        </div>
+        <button onclick="calculateRTOW()">Calculate RTOW</button>
+    </div>
+    <div id="result"></div>
+
+    <script>
+        const aircraftData = {
+            'A320-100': {
+                engines: {
+                    'CFM56-5-A1': { baseRTOW: 68000, maxRTOW: 68000, thrust: 25000 },
+                    'IAE V2500-A1': { baseRTOW: 68000, maxRTOW: 68000, thrust: 25000 }
+                }
+            },
+            'A320-200': {
+                engines: {
+                    'CFM56-5B4': { baseRTOW: 78000, maxRTOW: 78000, thrust: 27000 },
+                    'IAE V2527-A5': { baseRTOW: 77000, maxRTOW: 77000, thrust: 26600 }
+                }
+            },
+            'A320neo': {
+                engines: {
+                    'LEAP-1A': { baseRTOW: 79000, maxRTOW: 79000, thrust: 32160 },
+                    'PW1127G': { baseRTOW: 79000, maxRTOW: 79000, thrust: 31900 }
+                }
+            },
+            'A321-200': {
+                engines: {
+                    'CFM56-5B3': { baseRTOW: 93500, maxRTOW: 93500, thrust: 33000 },
+                    'IAE V2533-A5': { baseRTOW: 93500, maxRTOW: 93500, thrust: 33000 }
+                }
+            },
+            'A321neo': {
+                engines: {
+                    'LEAP-1A32': { baseRTOW: 97000, maxRTOW: 97000, thrust: 33110 },
+                    'PW1133G': { baseRTOW: 97000, maxRTOW: 97000, thrust: 33110 }
+                }
+            }
+        };
+
+        function updateEngineOptions() {
+            const aircraftType = document.getElementById('aircraftType').value;
+            const engineSelect = document.getElementById('engineType');
+            engineSelect.innerHTML = '';
+            const engines = aircraftData[aircraftType].engines;
+            for (let engine in engines) {
+                const option = document.createElement('option');
+                option.value = engine;
+                option.textContent = engine;
+                engineSelect.appendChild(option);
+            }
+        }
+
+        function calculateRTOW() {
+            const aircraftType = document.getElementById('aircraftType').value;
+            const engineType = document.getElementById('engineType').value;
+            const runwayLength = parseFloat(document.getElementById('runwayLength').value) || 3000;
+            const temperature = parseFloat(document.getElementById('temperature').value) || 15;
+            const elevation = parseFloat(document.getElementById('elevation').value) || 0;
+            const qnh = parseFloat(document.getElementById('qnh').value) || 1013;
+            const runwaySlope = parseFloat(document.getElementById('runwaySlope').value) || 0;
+            const windComponent = parseFloat(document.getElementById('windComponent').value) || 0;
+            const runwayCondition = document.getElementById('runwayCondition').value;
+            const flapSetting = document.getElementById('flapSetting').value;
+            const antiIce = document.getElementById('antiIce').value;
+            const packConfig = document.getElementById('packConfig').value;
+            const thrustSetting = document.getElementById('thrustSetting').value;
+            const obstacleHeight = parseFloat(document.getElementById('obstacleHeight').value) || 0;
+            const obstacleDistance = parseFloat(document.getElementById('obstacleDistance').value) || 0;
+
+            const aircraft = aircraftData[aircraftType];
+            const engine = aircraft.engines[engineType];
+            let rtow = engine.baseRTOW;
+
+            const mmelItems = Array.from(document.getElementById('mmelItems').selectedOptions).map(option => option.value);
+
+            // Apply MMEL penalties
+            if (mmelItems.includes('apu')) rtow -= 500;
+            if (mmelItems.includes('reverser')) rtow -= 1000;
+            if (mmelItems.includes('generator')) rtow -= 750;
+            if (mmelItems.includes('hydraulic')) rtow -= 1500;
+            if (mmelItems.includes('pack')) rtow -= 800;
+            if (mmelItems.includes('antiSkid')) rtow -= 2000;
+
+            // Pressure altitude calculation
+            const pressureAltitude = elevation + (1013 - qnh) * 30;
+
+            // Consider engine failure before V1 in the calculation
+            rtow -= 2000; // Additional penalty for engine failure before V1
+
+            // Apply factors
+            rtow += (runwayLength - 2500) * 15; // Runway length factor
+            rtow += (15 - temperature) * 150; // Temperature factor
+            rtow -= pressureAltitude * 1.5; // Pressure altitude factor
+            rtow -= runwaySlope * 500; // Runway slope factor
+            rtow += windComponent * 120; // Wind component factor
+
+            // Runway condition factor
+            if (runwayCondition === 'Wet') rtow -= 1500;
+            else if (runwayCondition === 'Contaminated') rtow -= 3000;
+
+            // Flap setting factor
+            if (flapSetting === '2') rtow += 500;
+            else if (flapSetting === '3') rtow -= 500;
+
+            // Anti-ice factor
+            if (antiIce === 'Engine') rtow -= 300;
+            else if (antiIce === 'Wing') rtow -= 200;
+            else if (antiIce === 'Both') rtow -= 500;
+
+            // Air conditioning packs factor
+            if (packConfig === 'High') rtow -= 200;
+            else if (packConfig === 'Off') rtow += 300;
+
+            // Thrust setting factor
+            if (thrustSetting === 'FLEX') rtow -= 2000;
+
+            // Obstacle clearance factor
+            if (obstacleHeight > 0 && obstacleDistance > 0) {
+                const obstacleGradient = (obstacleHeight / obstacleDistance) * 100;
+                rtow -= obstacleGradient * 500; // Simplified obstacle penalty
+            }
+
+            // Engine-specific adjustments
+            const baseThrust = 27000; // Reference thrust
+            const thrustFactor = (engine.thrust - baseThrust) / baseThrust;
+            rtow += thrustFactor * 1000; // Simplified thrust adjustment
+
+            // Ensure RTOW is within limits
+            rtow = Math.max(rtow, engine.baseRTOW * 0.8); // Minimum RTOW
+            rtow = Math.min(rtow, engine.maxRTOW); // Maximum RTOW
+
+            document.getElementById('result').textContent = `Calculated RTOW: ${Math.round(rtow)} kg`;
+        }
+
+        // Initialize engine options
+        document.addEventListener('DOMContentLoaded', updateEngineOptions);
+    </script>
+</body>
+</html>
